@@ -1,0 +1,16 @@
+﻿# Dependencies
+node_modules/
+
+# Tauri / Rust
+src-tauri/target/
+target/
+**/target/
+Cargo.lock
+
+# Database
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db

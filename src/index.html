@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensus - Suporte Cognitivo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="glass-card">
+            <div class="stats-header">
+                <div class="lvl-streak-container">
+                    <span id="lvl">LVL 1</span>
+                    <span id="user-title" class="user-title">Aprendiz</span>
+                    <span id="streak-display" class="streak-badge">🔥 0</span>
+                </div>
+                <div class="xp-container">
+                    <div id="xp-bar" class="xp-bar-fill"></div>
+                    <span id="xp-text">XP: 0/100</span>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-badge" title="Health">
+                    <span class="icon">❤️</span>
+                    <span class="label">HP</span>
+                    <span id="hp" class="value">100</span>
+                </div>
+                <div class="stat-badge" title="Stamina">
+                    <span class="icon">⚡</span>
+                    <span class="label">STM</span>
+                    <span id="stm" class="value">100</span>
+                </div>
+                <div class="stat-badge" title="Intelligence">
+                    <span class="icon">🧠</span>
+                    <span class="label">INT</span>
+                    <span id="int" class="value">10</span>
+                </div>
+                <div class="stat-badge" title="Spirit">
+                    <span class="icon">🌈</span>
+                    <span class="label">SPR</span>
+                    <span id="spr" class="value">10</span>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div style="text-align: right; font-size: 0.7rem; color: var(--nord3); margin-bottom: 5px;">v1.0.3-final</div>
+            <section class="actions-grid">
+                <button id="water-btn" class="action-btn" onclick="openMenu('water')">
+                    <span class="btn-icon">💧</span> Água
+                </button>
+                <button class="action-btn" onclick="openMenu('food')">
+                    <span class="btn-icon">🍲</span> Comida
+                </button>
+                <button class="action-btn" onclick="openMenu('mood')">
+                    <span class="btn-icon">🌈</span> Humor
+                </button>
+                <button class="action-btn" onclick="openMenu('hygiene')">
+                    <span class="btn-icon">🧼</span> Higiene
+                </button>
+                <button class="action-btn" onclick="openMedicationsMenu()">
+                    <span class="btn-icon">💊</span> Remédios
+                </button>
+                <button class="action-btn" onclick="openSleepMenu()">
+                    <span class="btn-icon">😴</span> Sono
+                </button>
+            </section>
+            <div style="display: flex; justify-content: center; width: 100%;">
+                <button id="sync-btn" class="sync-btn" onclick="syncCalendar()">
+                    <span class="btn-icon">📅</span> Sincronizar Calendário
+                </button>
+            </div>
+            <section class="quests-container">
+                <div class="section-header">
+                    <span class="header-icon">⚔️</span>
+                    <h2>Quests do Dia</h2>
+                    <button id="stats-btn" class="stats-toggle-btn" onclick="openStats()">📊</button>
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="quest-input" placeholder="Nova missão...">
+                    <button id="add-quest-btn" onclick="addQuest()">+</button>
+                </div>
+                <ul id="quest-list"></ul>
+            </section>
+        </main>
+        <div id="menu-modal" class="modal">
+            <div class="modal-content glass-card">
+                <h3 id="modal-title">Escolha uma opção</h3>
+                <div id="modal-options" class="options-grid"></div>
+                <div id="modal-input-area" style="display:none;">
+                    <input type="text" id="modal-text-input" placeholder="Nova micro-tarefa...">
+                    <button class="confirm-btn" onclick="confirmAddSubtask()">Adicionar 🔨</button>
+                </div>
+                <button class="close-btn" onclick="closeMenu()">Cancelar</button>
+            </div>
+        </div>
+        <div id="stats-modal" class="modal">
+                <div class="modal-content glass-card" style="max-width: 600px;">
+                    <h3>Seu Progresso (Atualizado)</h3>
+                    <div class="chart-controls" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
+
+                    <button class="option-btn" onclick="renderActivityChart('week')">7 Dias</button>
+                    <button class="option-btn" onclick="renderActivityChart('month')">30 Dias</button>
+                </div>
+                <div class="metric-selection" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <label class="metric-checkbox">
+                        <input type="checkbox" value="water" onchange="updateChartMetrics()"> 💧 Água
+                    </label>
+                    <label class="metric-checkbox">
+                        <input type="checkbox" value="food" onchange="updateChartMetrics()"> 🍲 Comida
+                    </label>
+                    <label class="metric-checkbox">
+                        <input type="checkbox" value="mood" onchange="updateChartMetrics()"> 🌈 Humor
+                    </label>
+                    <label class="metric-checkbox">
+                        <input type="checkbox" value="sleep" onchange="updateChartMetrics()"> 😴 Sono
+                    </label>
+                </div>
+                <div class="charts-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+                <button class="close-btn" onclick="closeStats()">Fechar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Custom Tooltip -->
+    <div id="custom-tooltip" class="custom-tooltip"></div>
+    <script src="main.js"></script>
+</body>
+</html>
+
+

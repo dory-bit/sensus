@@ -1,0 +1,40 @@
+{
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "devPath": "../src",
+    "distDir": "../src",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "Sensus",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.sensus.app",
+      "icon": ["icons/icon.ico"]
+    },
+    "windows": [
+      {
+        "title": "Sensus",
+        "width": 400,
+        "height": 600,
+        "resizable": false,
+        "fullscreen": false,
+        "alwaysOnTop": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "systemTray": {
+      "iconPath": "icons/icon.ico"
+    }
+  }
+}
