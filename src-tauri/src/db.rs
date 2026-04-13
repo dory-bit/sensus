@@ -311,9 +311,27 @@ pub fn get_medications(conn: &Connection) -> Result<Vec<Medication>> {
 }
 
 pub fn toggle_medication(conn: &Connection, id: i32, is_taken: bool) -> Result<()> {
+    let val = if is_taken { 1 } else { 0 };
+
+    // Log to file for debugging since we can't see stdout in .exe
+    let log_msg = format!(
+        "{} - Toggle Med ID {}: {}\n",
+        chrono::Utc::now().to_rfc3339(),
+        id,
+        val
+    );
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"C:\Users\Lukinha Gaming\Documents\ia\meds_debug.log")
+        .and_then(|mut file| {
+            use std::io::Write;
+            file.write_all(log_msg.as_bytes())
+        });
+
     conn.execute(
         "UPDATE medications SET is_taken = ?1, last_taken_date = ?2 WHERE id = ?3",
-        params![is_taken, Utc::now().to_rfc3339(), id],
+        params![val, Utc::now().to_rfc3339(), id],
     )?;
     Ok(())
 }
@@ -430,9 +448,8 @@ pub fn get_current_streak(conn: &Connection) -> i32 {
     .unwrap_or(0)
 }
 
-pub fn delete_completed_quests(conn: &Connection) -> Result<usize> {
-    let deleted = conn.execute("DELETE FROM quests WHERE is_completed = 1", [])?;
-    Ok(deleted)
+pub fn reset_completed_quests(conn: &Connection) -> Result<usize> {
+    conn.execute("UPDATE quests SET is_completed = 0", [])
 }
 
 pub fn cancel_quest(conn: &Connection, id: i32) -> Result<()> {
@@ -489,6 +506,21 @@ pub fn quest_exists(conn: &Connection, text: &str) -> bool {
 }
 
 pub fn toggle_quest_status(conn: &Connection, id: i32, completed: bool) -> Result<()> {
+    let log_msg = format!(
+        "{} - Toggle Quest ID {}: {}\n",
+        chrono::Utc::now().to_rfc3339(),
+        id,
+        completed
+    );
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"C:\Users\Lukinha Gaming\Documents\ia\sensus_debug.log")
+        .and_then(|mut file| {
+            use std::io::Write;
+            file.write_all(log_msg.as_bytes())
+        });
+
     conn.execute(
         "UPDATE quests SET is_completed = ?1 WHERE id = ?2",
         params![completed, id],

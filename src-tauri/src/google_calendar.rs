@@ -37,8 +37,11 @@ pub struct GoogleCalendarClient {
 
 impl GoogleCalendarClient {
     pub fn new(token_path: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let token_content = fs::read_to_string(token_path)?;
-        let token_json: serde_json::Value = serde_json::from_str(&token_content)?;
+        let token_content = match fs::read_to_string(token_path) {
+            Ok(content) => content,
+            Err(_) => return Err("AUTH_REQUIRED".into()),
+        };
+        let token_json: serde_json::Value = serde_json::from_str(&token_content).map_err(|_| "TOKEN_MALFORMED")?;
         
         Ok(Self {
             access_token: token_json["token"].as_str().ok_or("Token not found")?.to_string(),

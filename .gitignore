@@ -14,3 +14,8 @@ Cargo.lock
 # OS files
 .DS_Store
 Thumbs.db
+
+*.json
+*.log
+/target
+

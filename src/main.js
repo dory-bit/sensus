@@ -24,10 +24,19 @@ function debugLog(msg) {
 
 async function tauriInvoke(cmd, args = {}) {
     try {
-        if (typeof invoke === 'function') return await invoke(cmd, args);
-        if (window.__TAURI__ && window.__TAURI__.invoke) return await window.__TAURI__.invoke(cmd, args);
-        if (window.__TAURI__ && window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) return await window.__TAURI__.tauri.invoke(cmd, args);
-        return null;
+        let inv = null;
+        if (typeof invoke === 'function') inv = invoke;
+        else if (window.__TAURI__ && window.__TAURI__.invoke) inv = window.__TAURI__.invoke;
+        else if (window.__TAURI__ && window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) inv = window.__TAURI__.tauri.invoke;
+        
+        if (!inv) {
+            throw new Error("Tauri invoke function not found. Is the app running in a Tauri environment?");
+        }
+        
+        debugLog(`Invoking ${cmd} with args: ${JSON.stringify(args)}`);
+        const result = await inv(cmd, args);
+        debugLog(`Response from ${cmd}: ${JSON.stringify(result)}`);
+        return result;
     } catch (e) { 
         debugLog(`Tauri Invoke Error [${cmd}]: ${e}`); 
         throw e; 
@@ -276,13 +285,28 @@ function renderQuest(q, depth = 0, container = document.getElementById("quest-li
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = q.is_completed;
-    checkbox.onchange = async () => {
-        try {
-            const updatedStats = await tauriInvoke("toggle_quest", { id: q.id, completed: checkbox.checked });
-            if (updatedStats) { state = updatedStats; updateUI(); }
-            await window.refreshQuests();
-        } catch (e) { alert(`Erro: ${e}`); }
-    };
+            checkbox.onclick = async () => {
+                try {
+                    const completedValue = checkbox.checked;
+                    const qid = q.id;
+                    debugLog(`Sensus: Requesting toggle_quest for ID ${qid} to ${completedValue}`);
+                    
+                    const updatedStats = await tauriInvoke("toggle_quest", { id: qid, completed: completedValue });
+                    
+                    if (!updatedStats) {
+                        alert("Erro: Falha na comunicação com o backend ao salvar missão.");
+                        checkbox.checked = !checkbox.checked;
+                        return;
+                    }
+                    
+                    state = updatedStats;
+                    updateUI();
+                    await window.refreshQuests();
+                } catch (e) { 
+                    alert(`Erro ao salvar missão: ${e}`); 
+                    checkbox.checked = !checkbox.checked;
+                }
+            };
     const span = document.createElement("span");
     span.innerText = q.task_text;
     if (q.is_completed) span.style.textDecoration = "line-through";
@@ -462,13 +486,24 @@ window.openMedicationsMenu = async function() {
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = med.is_taken;
-            checkbox.onchange = async () => {
-                await tauriInvoke("toggle_medication", { id: med.id, is_taken: checkbox.checked });
-                if (checkbox.checked) {
-                    await updateStatsManually(5, 5, 0, 5);
-                    debugLog(`Medication ${med.id} taken: Bonus applied`);
-                } else {
-                    debugLog(`Medication ${med.id} unchecked`);
+            checkbox.onclick = async () => {
+                try {
+                    const takenValue = checkbox.checked ? 1 : 0;
+                    const medId = med.id;
+                    debugLog(`Attempting to toggle medication ID ${medId} to ${takenValue}`);
+                    
+                    await tauriInvoke("toggle_medication", { id: medId, isTaken: takenValue });
+                    
+                    if (checkbox.checked) {
+                        await updateStatsManually(5, 5, 0, 5);
+                        debugLog(`Medication ${medId} taken: Bonus applied`);
+                    } else {
+                        debugLog(`Medication ${medId} unchecked`);
+                    }
+                } catch (e) {
+                    console.error(`Error toggling medication ${med.id}:`, e);
+                    alert(`Erro ao salvar remédio: ${e}`);
+                    checkbox.checked = !checkbox.checked; 
                 }
             };
 
