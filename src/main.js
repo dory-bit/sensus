@@ -258,92 +258,110 @@ window.refreshQuests = async function() {
                 roots.push(questMap[q.id]);
             }
         });
-        function renderQuest(q, depth = 0) {
-            const li = document.createElement("li");
-            li.className = `quest-item ${depth > 0 ? "subtask" : ""}`;
-            li.style.marginLeft = `${depth * 20}px`;
-            li.dataset.id = q.id;
-            li.draggable = false; 
-            li.style.cursor = "grab";
+function renderQuest(q, depth = 0, container = document.getElementById("quest-list")) {
+    const li = document.createElement("li");
+    li.className = `quest-item ${depth > 0 ? "subtask" : ""}`;
+    li.style.marginLeft = `${depth * 20}px`;
+    li.dataset.id = q.id;
+    li.draggable = false; 
+    li.style.cursor = "grab";
+    
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "quest-content";
+    contentDiv.style.display = "flex";
+    contentDiv.style.alignItems = "center";
+    contentDiv.style.gap = "12px";
+    contentDiv.style.width = "100%";
+    
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = q.is_completed;
+    checkbox.onchange = async () => {
+        try {
+            const updatedStats = await tauriInvoke("toggle_quest", { id: q.id, completed: checkbox.checked });
+            if (updatedStats) { state = updatedStats; updateUI(); }
+            await window.refreshQuests();
+        } catch (e) { alert(`Erro: ${e}`); }
+    };
+    const span = document.createElement("span");
+    span.innerText = q.task_text;
+    if (q.is_completed) span.style.textDecoration = "line-through";
+    contentDiv.appendChild(checkbox);
+    contentDiv.appendChild(span);
+    const optionsBtn = document.createElement("button");
+    optionsBtn.className = "options-btn";
+    optionsBtn.innerText = "⋮";
+    optionsBtn.onclick = () => window.openQuestOptions(q.id, q.task_text);
+    contentDiv.appendChild(optionsBtn);
+    const hammer = document.createElement("button");
+    hammer.className = "hammer-btn";
+    hammer.innerText = "🔨";
+    hammer.onclick = () => window.openBreakdownMenu(q.id, q.task_text);
+    contentDiv.appendChild(hammer);
+    li.appendChild(contentDiv);
+    
+    li.onmousedown = (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        
+        draggedElement = li;
+        li.classList.add("dragging");
+        li.style.pointerEvents = "none";
+        
+        const onMouseMove = (moveEvent) => {
+            const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+            const closestItem = target?.closest(".quest-item");
             
-            li.onmousedown = (e) => {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            if (closestItem && closestItem !== draggedElement) {
+                const rect = closestItem.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
                 
-                draggedElement = li;
-                li.classList.add("dragging");
-                li.style.pointerEvents = "none"; // Prevent element from blocking elementFromPoint
-                
-                const onMouseMove = (moveEvent) => {
-                    const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-                    const closestItem = target?.closest(".quest-item");
-                    
-                    if (closestItem && closestItem !== draggedElement) {
-                        const rect = closestItem.getBoundingClientRect();
-                        const midpoint = rect.top + rect.height / 2;
-                        
-                        if (moveEvent.clientY < midpoint) {
-                            closestItem.parentNode.insertBefore(draggedElement, closestItem);
-                        } else {
-                            closestItem.parentNode.insertBefore(draggedElement, closestItem.nextSibling);
-                        }
-                        closestItem.classList.add("drag-over");
+                if (moveEvent.clientY < midpoint) {
+                    closestItem.parentNode.insertBefore(draggedElement, closestItem);
+                } else {
+                    closestItem.parentNode.insertBefore(draggedElement, closestItem.nextSibling);
+                }
+                closestItem.classList.add("drag-over");
+            }
+        };
+        
+        const onMouseUp = async () => {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+            
+            li.classList.remove("dragging");
+            li.style.pointerEvents = "auto";
+            document.querySelectorAll(".quest-item").forEach(item => item.classList.remove("drag-over"));
+            
+            try {
+                const allItems = Array.from(document.querySelectorAll(".quest-item"));
+                for (let i = 0; i < allItems.length; i++) {
+                    const id = parseInt(allItems[i].dataset.id);
+                    if (!isNaN(id)) {
+                        await tauriInvoke("update_quest_position", { id: id, position: i });
                     }
-                };
-                
-                const onMouseUp = async () => {
-                    document.removeEventListener("mousemove", onMouseMove);
-                    document.removeEventListener("mouseup", onMouseUp);
-                    
-                    li.classList.remove("dragging");
-                    li.style.pointerEvents = "auto"; // Restore pointer events
-                    document.querySelectorAll(".quest-item").forEach(item => item.classList.remove("drag-over"));
-                    
-                    try {
-                        const allItems = Array.from(document.querySelectorAll(".quest-item"));
-                        for (let i = 0; i < allItems.length; i++) {
-                            const id = parseInt(allItems[i].dataset.id);
-                            await tauriInvoke("update_quest_position", { id: id, position: i });
-                        }
-                        debugLog("Positions updated in DB");
-                    } catch (err) { 
-                        debugLog(`Erro ao salvar ordem: ${err}`); 
-                        await window.refreshQuests();
-                    }
-                    draggedElement = null;
-                };
-                
-                document.addEventListener("mousemove", onMouseMove);
-                document.addEventListener("mouseup", onMouseUp);
-            };
+                }
+                debugLog("Positions updated in DB");
+            } catch (err) { 
+                debugLog(`Erro ao salvar ordem: ${err}`); 
+                await window.refreshQuests();
+            }
+            draggedElement = null;
+        };
+        
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+    };
 
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.checked = q.is_completed;
-            checkbox.onchange = async () => {
-                try {
-                    const updatedStats = await tauriInvoke("toggle_quest", { id: q.id, completed: checkbox.checked });
-                    if (updatedStats) { state = updatedStats; updateUI(); }
-                    await window.refreshQuests();
-                } catch (e) { alert(`Erro: ${e}`); }
-            };
-            const span = document.createElement("span");
-            span.innerText = q.task_text;
-            if (q.is_completed) span.style.textDecoration = "line-through";
-            li.appendChild(checkbox);
-            li.appendChild(span);
-            const optionsBtn = document.createElement("button");
-            optionsBtn.className = "options-btn";
-            optionsBtn.innerText = "⋮";
-            optionsBtn.onclick = () => window.openQuestOptions(q.id, q.task_text);
-            li.appendChild(optionsBtn);
-            const hammer = document.createElement("button");
-            hammer.className = "hammer-btn";
-            hammer.innerText = "🔨";
-            hammer.onclick = () => window.openBreakdownMenu(q.id, q.task_text);
-            li.appendChild(hammer);
-            list.appendChild(li);
-            q.children.forEach(child => renderQuest(child, depth + 1));
-        }
+    const childrenContainer = document.createElement("div");
+    childrenContainer.className = "children-container";
+    q.children.forEach(child => {
+        renderQuest(child, depth + 1, childrenContainer);
+    });
+    li.appendChild(childrenContainer);
+    
+    container.appendChild(li);
+}
+
         roots.sort((a, b) => a.position - b.position || a.id - b.id).forEach(root => renderQuest(root));
     } catch (e) { debugLog(`Error refreshing quests: ${e}`); }
 }
@@ -565,15 +583,33 @@ window.syncCalendar = async function() {
 
 async function sendNotification(title, body) {
     try {
+        // 1. Notificação Nativa do Navegador (Mais confiável no WebView2)
+        if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(title, { 
+                body: body, 
+                icon: 'src-tauri/icons/icon.png' 
+            });
+            debugLog("Browser notification sent");
+        }
+        
+        // 2. Notificação do Tauri
         if (window.__TAURI__ && window.__TAURI__.notification) {
             await window.__TAURI__.notification.send({ title, body });
+            debugLog("Tauri notification sent");
         }
+        
+        // 3. Notificação via Ponte Telegram
         await fetch("http://127.0.0.1:8000/send_notification", {
             method: "POST",
-            headers: { "Content-H-Type": "application/json" },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, body })
         }).catch(e => console.error("Telegram notification failed:", e));
-    } catch (e) { console.error("Notification error:", e); }
+        debugLog("Telegram notification request sent");
+
+    } catch (e) { 
+        console.error("Notification error:", e); 
+        debugLog(`Notification error: ${e}`);
+    }
 }
 
 function setupReminders() {
@@ -747,6 +783,14 @@ async function initSensus() {
     debugLog("Init Sensus started");
     setupWaterTooltip();
     try {
+        // Solicitar permissão de notificação do navegador
+        if ("Notification" in window) {
+            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                await Notification.requestPermission();
+                debugLog(`Notification permission requested: ${Notification.permission}`);
+            }
+        }
+
         debugLog("Loading user data...");
         await loadData();
         debugLog("Data loaded. Setting up reminders...");
@@ -755,6 +799,9 @@ async function initSensus() {
         // Sincronização automática ao abrir
         debugLog("Auto-syncing calendar on startup...");
         await syncCalendar();
+
+        // TESTE DE NOTIFICAÇÃO: Dispara assim que o app abre para testar permissões do Windows
+        sendNotification("Sensus Iniciou! 🌙", "Se você está vendo isso, as notificações do Windows estão funcionando perfeitamente.");
     } catch (e) {
         debugLog(`Erro na inicialização: ${e}`);
     }
