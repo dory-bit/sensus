@@ -13,6 +13,8 @@ pub struct Quest {
     pub parent_id: Option<i32>,
     pub xp: i32,
     pub position: i32,
+    pub due_date: Option<String>,
+    pub due_time: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -151,6 +153,10 @@ pub fn init_db() -> Connection {
         conn.execute("ALTER TABLE quests ADD COLUMN due_date TEXT", [])
             .ok();
     }
+    if !table_info.contains(&"due_time".to_string()) {
+        conn.execute("ALTER TABLE quests ADD COLUMN due_time TEXT", [])
+            .ok();
+    }
 
     // Migração para a tabela stats (last_update)
     let stats_info: Vec<String> = conn
@@ -216,11 +222,18 @@ pub fn save_stats(conn: &Connection, stats: &UserStats) -> Result<()> {
     Ok(())
 }
 
-pub fn add_quest(conn: &Connection, text: &str, parent_id: i32, xp: i32) -> Result<i32> {
+pub fn add_quest(
+    conn: &Connection,
+    text: &str,
+    parent_id: i32,
+    xp: i32,
+    due_date: Option<String>,
+    due_time: Option<String>,
+) -> Result<i32> {
     let trimmed_text = text.trim();
     println!(
-        "Sensus DB: Tentando inserir quest: text='{}', parent_id={}, xp={}",
-        trimmed_text, parent_id, xp
+        "Sensus DB: Tentando inserir quest: text='{}', parent_id={}, xp={}, due_date={:?}, due_time={:?}",
+        trimmed_text, parent_id, xp, due_date, due_time
     );
     let pid = if parent_id == -1 {
         None
@@ -229,8 +242,8 @@ pub fn add_quest(conn: &Connection, text: &str, parent_id: i32, xp: i32) -> Resu
     };
 
     conn.execute(
-        "INSERT INTO quests (task_text, parent_id, xp) VALUES (?1, ?2, ?3)",
-        params![trimmed_text, pid, xp],
+        "INSERT INTO quests (task_text, parent_id, xp, due_date, due_time) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![trimmed_text, pid, xp, due_date, due_time],
     )?;
     let id = conn.last_insert_rowid() as i32;
     println!("Sensus DB: Quest inserida com sucesso! ID: {}", id);
@@ -238,10 +251,9 @@ pub fn add_quest(conn: &Connection, text: &str, parent_id: i32, xp: i32) -> Resu
 }
 
 pub fn get_all_quests(conn: &Connection) -> Result<Vec<Quest>> {
-    println!("Sensus DB: Buscando missões do dia...");
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let mut stmt = conn.prepare(
-        "SELECT id, task_text, is_completed, parent_id, xp, position 
+        "SELECT id, task_text, is_completed, parent_id, xp, position, due_date, due_time 
          FROM quests 
          WHERE due_date IS NULL OR due_date <= ?1 
          ORDER BY position ASC, id ASC",
@@ -254,6 +266,8 @@ pub fn get_all_quests(conn: &Connection) -> Result<Vec<Quest>> {
             parent_id: row.get(3)?,
             xp: row.get(4)?,
             position: row.get(5)?,
+            due_date: row.get(6)?,
+            due_time: row.get(7)?,
         })
     })?;
 
@@ -261,7 +275,6 @@ pub fn get_all_quests(conn: &Connection) -> Result<Vec<Quest>> {
     for quest in quest_iter {
         quests.push(quest?);
     }
-    println!("Sensus DB: {} missões encontradas para hoje.", quests.len());
     Ok(quests)
 }
 

@@ -76,7 +76,7 @@ fn update_user_stats(state: State<'_, DbState>, stats: UserStats, activity: Opti
 fn add_new_quest(state: State<'_, DbState>, text: String, parent_id: i32) -> Result<i32, String> {
     let conn = state.0.lock().unwrap();
     let xp = if parent_id != -1 { 5 } else { 10 };
-    match add_quest(&conn, &text, parent_id, xp) {
+    match add_quest(&conn, &text, parent_id, xp, None, None) {
         Ok(id) => Ok(id),
         Err(e) => Err(format!("Erro no Banco de Dados: {}", e)),
     }
@@ -215,7 +215,20 @@ async fn sync_google_calendar(state: State<'_, DbState>) -> Result<String, Strin
         if let Some(summary) = event.summary {
             let exists = quest_exists(&conn, &summary);
             if !exists {
-                if let Ok(_) = add_quest(&conn, &summary, -1, 10) {
+                let due_date = event.start.date.clone().or_else(|| {
+                    event.start.date_time.as_ref().map(|dt| dt.split('T').next().unwrap_or("").to_string())
+                });
+                
+                let due_time = event.start.date_time.as_ref().and_then(|dt| {
+                    let time_part = dt.split('T').nth(1).unwrap_or("");
+                    if time_part.len() >= 5 {
+                        Some(time_part[0..5].to_string())
+                    } else {
+                        None
+                    }
+                });
+                
+                if let Ok(_) = add_quest(&conn, &summary, -1, 10, due_date, due_time) {
                     added_count += 1;
                 }
             }

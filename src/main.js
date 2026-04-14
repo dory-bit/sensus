@@ -308,7 +308,8 @@ function renderQuest(q, depth = 0, container = document.getElementById("quest-li
                 }
             };
     const span = document.createElement("span");
-    span.innerText = q.task_text;
+    const timeDisplay = q.due_time ? ` <span style="font-size: 0.8em; opacity: 0.7; margin-left: 8px;">${q.due_time}</span>` : "";
+    span.innerHTML = `${q.task_text}${timeDisplay}`;
     if (q.is_completed) span.style.textDecoration = "line-through";
     contentDiv.appendChild(checkbox);
     contentDiv.appendChild(span);

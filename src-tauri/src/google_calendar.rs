@@ -12,6 +12,7 @@ pub struct GoogleEvent {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoogleEventTime {
+    #[serde(rename = "dateTime")]
     pub date_time: Option<String>,
     pub date: Option<String>,
 }
@@ -123,6 +124,13 @@ impl GoogleCalendarClient {
         let body = response.json::<GoogleCalendarResponse>().await?;
         let count = body.items.as_ref().map(|v| v.len()).unwrap_or(0);
         println!("Sensus API: {} eventos encontrados no período.", count);
+        
+        if let Some(items) = &body.items {
+            for item in items {
+                println!("Sensus API Event: summary='{:?}', start_date='{:?}', start_date_time='{:?}'", 
+                    item.summary, item.start.date, item.start.date_time);
+            }
+        }
         
         Ok(body.items.unwrap_or_default())
     }
