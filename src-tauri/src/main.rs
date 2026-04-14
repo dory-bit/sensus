@@ -27,8 +27,8 @@ fn load_user_data(state: State<'_, DbState>) -> UserStats {
             let last_update_date = last_update.split('T').next().unwrap_or("");
             
             if last_update_date != today {
-                println!("Sensus: Day change detected ({} != {}). Resetting daily data...", last_update_date, today);
-                let _ = db::reset_completed_quests(&conn);
+                println!("Sensus: Day change detected ({} != {}). Deleting completed quests...", last_update_date, today);
+                let _ = db::delete_completed_quests(&conn);
                 let _ = db::reset_meds_daily(&conn);
                 
                 let now = Local::now().to_rfc3339();

@@ -410,26 +410,31 @@ window.openQuestOptions = function(qid, text) {
     const rescheduleBtn = document.createElement("button");
     rescheduleBtn.className = "option-btn";
     rescheduleBtn.innerText = "📅 Reagendar";
-    rescheduleBtn.onclick = () => {
-        document.getElementById("modal-options").style.display = "none";
-        document.getElementById("modal-input-area").style.display = "block";
-        document.getElementById("modal-title").innerText = "Nova Data (AAAA-MM-DD)";
-        document.getElementById("modal-text-input").placeholder = "Ex: 2026-04-15";
-        const confirmBtn = document.querySelector(".confirm-btn");
-        const originalFn = confirmBtn.onclick;
-        confirmBtn.innerText = "Salvar Data 📅";
-        confirmBtn.onclick = async () => {
-            const date = document.getElementById("modal-text-input").value.trim();
-            if (!date) return;
-            try {
-                await tauriInvoke("reschedule_quest", { id: qid, date: date });
-                window.closeMenu();
-                await window.refreshQuests();
-            } catch (e) { alert(`Erro: ${e}`); }
-            confirmBtn.innerText = "Adicionar 🔨";
-            confirmBtn.onclick = originalFn;
-        };
-    };
+            rescheduleBtn.onclick = () => {
+                document.getElementById("modal-options").style.display = "none";
+                document.getElementById("modal-input-area").style.display = "block";
+                document.getElementById("modal-title").innerText = "Nova Data";
+                const dateInput = document.getElementById("modal-text-input");
+                dateInput.type = "date";
+                dateInput.placeholder = "";
+                const confirmBtn = document.querySelector(".confirm-btn");
+                const originalFn = confirmBtn.onclick;
+                confirmBtn.innerText = "Salvar Data 📅";
+                confirmBtn.onclick = async () => {
+                    const date = dateInput.value;
+                    if (!date) {
+                        alert("Por favor, selecione uma data.");
+                        return;
+                    }
+                    try {
+                        await tauriInvoke("reschedule_quest", { id: qid, date: date });
+                        window.closeMenu();
+                        await window.refreshQuests();
+                    } catch (e) { alert(`Erro: ${e}`); }
+                    confirmBtn.innerText = "Adicionar 🔨";
+                    confirmBtn.onclick = originalFn;
+                };
+            };
     optionsDiv.appendChild(cancelBtn);
     optionsDiv.appendChild(rescheduleBtn);
     document.getElementById("menu-modal").classList.add("active");
@@ -441,6 +446,7 @@ window.openBreakdownMenu = function(qid, text) {
     document.getElementById("modal-options").style.display = "none";
     document.getElementById("modal-input-area").style.display = "block";
     const input = document.getElementById("modal-text-input");
+    input.type = "text";
     input.value = "";
     input.placeholder = "Nome da submissão...";
     const confirmBtn = document.querySelector(".confirm-btn");

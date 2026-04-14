@@ -238,10 +238,15 @@ pub fn add_quest(conn: &Connection, text: &str, parent_id: i32, xp: i32) -> Resu
 }
 
 pub fn get_all_quests(conn: &Connection) -> Result<Vec<Quest>> {
-    println!("Sensus DB: Buscando todas as quests...");
-    let mut stmt = conn
-        .prepare("SELECT id, task_text, is_completed, parent_id, xp, position FROM quests ORDER BY position ASC, id ASC")?;
-    let quest_iter = stmt.query_map([], |row| {
+    println!("Sensus DB: Buscando missões do dia...");
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let mut stmt = conn.prepare(
+        "SELECT id, task_text, is_completed, parent_id, xp, position 
+         FROM quests 
+         WHERE due_date IS NULL OR due_date <= ?1 
+         ORDER BY position ASC, id ASC",
+    )?;
+    let quest_iter = stmt.query_map([today], |row| {
         Ok(Quest {
             id: row.get(0)?,
             task_text: row.get(1)?,
@@ -256,7 +261,7 @@ pub fn get_all_quests(conn: &Connection) -> Result<Vec<Quest>> {
     for quest in quest_iter {
         quests.push(quest?);
     }
-    println!("Sensus DB: {} quests encontradas.", quests.len());
+    println!("Sensus DB: {} missões encontradas para hoje.", quests.len());
     Ok(quests)
 }
 
@@ -448,8 +453,8 @@ pub fn get_current_streak(conn: &Connection) -> i32 {
     .unwrap_or(0)
 }
 
-pub fn reset_completed_quests(conn: &Connection) -> Result<usize> {
-    conn.execute("UPDATE quests SET is_completed = 0", [])
+pub fn delete_completed_quests(conn: &Connection) -> Result<usize> {
+    conn.execute("DELETE FROM quests WHERE is_completed = 1", [])
 }
 
 pub fn cancel_quest(conn: &Connection, id: i32) -> Result<()> {
